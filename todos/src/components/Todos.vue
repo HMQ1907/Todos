@@ -22,7 +22,7 @@
           </div>
         </div>
         <hr />
-        <ul class="list-unstyled" v-for="(item, index) in todos" :key="item.id">
+        <ul class="list-unstyled" v-for="(item) in todos" :key="item.id">
           <li class="ui-state-default li-items mt-1">
             <div class="input-group">
               <div class="input-group-prepend">
@@ -36,13 +36,13 @@
                 </div>
               </div>
               <input
-                v-bind:class="{ 'done-task': item.done }"
+                v-bind:class="{ 'done-task': item.completed }"
                 type="text"
                 class="form-control"
                 v-model="item.content"
               />
               <div class="input-group-append remove-icon">
-                <span @click="deleteTask(index)" class="input-group-text"
+                <span @click="deleteTask(item.id)" class="input-group-text"
                   >&#10060;</span
                 >
               </div>
@@ -52,13 +52,13 @@
         <hr />
         <div class="todo-footer row">
           <div class="col-md-6">
-            <div @click="checkAll(true)" class="form-check form-check-inline">
+            <div @click="checkAll(1)" class="form-check form-check-inline">
               &#9989;
               <label class="form-check-label" for="inlineRadio1"
                 >Check all</label
               >
             </div>
-            <div @click="checkAll(false)" class="form-check form-check-inline">
+            <div @click="checkAll(0)" class="form-check form-check-inline">
               &#10062;
               <label
                 @click="checkAll(false)"
@@ -95,39 +95,50 @@
 </template>
 
 <script>
+import axios from 'axios'
 export default {
   name: 'Todos',
   data () {
     return {
-      todos: [
-        { id: 1, content: 'Content 1', done: false, checked: true },
-        { id: 2, content: 'Content 2', done: true, checked: false },
-        { id: 3, content: 'Content 3', done: false, checked: false }
-      ],
+      todos: [],
       textContent: '',
       idContent: 2
     }
+  },
+  created(){
+    axios.get('http://127.0.0.1:8000/api/todos')
+    .then(res => {
+      this.todos = res.data.data
+    })
   },
   methods: {
     addTodo () {
       if (this.textContent.trim().length === 0) {
         alert('Please enter content')
       } else {
-        this.idContent++
-        this.todos.push({
-          id: this.idContent,
-          content: this.textContent,
-          done: false,
-          checked: false
+       let param = {
+        content: this.textContent,
+        completed: false,
+        checked: false,
+       }
+       axios.post('http://127.0.0.1:8000/api/todo/add', param)
+       .then(res => {
+        this.todos = res.data.data;
+        this.textContent = '';
+       });
+      }
+    },
+    deleteTask(id) {
+    if (confirm('Are you sure you want to delete this task?')) {
+      axios.delete('http://127.0.0.1:8000/api/todo/delete', { params: { id } })
+        .then(res => {
+          this.todos = res.data.data;
         })
-        this.textContent = ''
-      }
-    },
-    deleteTask (index) {
-      if (confirm('Are you sure delete this task?')) {
-        this.todos.splice(index, 1)
-      }
-    },
+        .catch(error => {
+          console.error('Error deleting task:', error);
+        });
+    }
+  },
     checkAll (flag) {
       this.todos.forEach((item) => {
         item.checked = flag
@@ -137,16 +148,24 @@ export default {
       if (confirm('Are you sure done all task ?')) {
         this.todos.forEach((item) => {
           if (item.checked) {
-            item.done = true
+            item.completed = true
           }
         })
       }
     },
-    deleteAll () {
+    deleteAll() {
       if (confirm('Are you sure delete all task ?')) {
-        this.todos = this.todos.filter((item) => {
-          return !item.checked
-        })
+        let params = this.todos.filter((item) => {
+          return item.checked;
+        });
+        let queryString = params.map(todo => `id[]=${todo.id}`).join('&');
+        axios.delete(`http://127.0.0.1:8000/api/todo/deleteAll?${queryString}`)
+          .then(res => {
+            this.todos = res.data.data;
+          })
+          .catch(error => {
+            console.error(error);
+          });
       }
     }
   }

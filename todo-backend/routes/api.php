@@ -20,3 +20,6 @@ use App\Http\Controllers\API\TodoController;
 // });
 
 Route::get('/todos', [TodoController::class, 'index']);
+Route::post('todo/add', [TodoController::class, 'add']);
+Route::delete('todo/delete', [TodoController::class, 'delete']);
+Route::delete('todo/deleteAll', [TodoController::class, 'deleteAll']);
